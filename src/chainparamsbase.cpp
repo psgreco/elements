@@ -17,6 +17,7 @@ const std::string CBaseChainParams::SIGNET = "signet";
 const std::string CBaseChainParams::REGTEST = "regtest";
 const std::string CBaseChainParams::LIQUID1 = "liquidv1";
 const std::string CBaseChainParams::LIQUID1TEST = "liquidv1test";
+const std::string CBaseChainParams::LIQUIDTESTNET = "liquidtestnet";
 
 const std::string CBaseChainParams::DEFAULT = CBaseChainParams::LIQUID1;
 
@@ -90,6 +91,8 @@ std::unique_ptr<CBaseChainParams> CreateBaseChainParams(const std::string& chain
         return MakeUnique<CBaseChainParams>("liquidv1", 7041, 8332, 37041);
     } else if (chain == CBaseChainParams::LIQUID1TEST) {
         return MakeUnique<CBaseChainParams>("liquidv1test", 7040, 18332, 37040);  // Use same ports as customparams
+    } else if (chain == CBaseChainParams::LIQUIDTESTNET) {
+        return MakeUnique<CBaseChainParams>(chain, 7039, 18331, 37039);
     }
 
     // ELEMENTS:
