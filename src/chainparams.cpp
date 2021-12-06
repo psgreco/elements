@@ -933,11 +933,18 @@ public:
         // disable automatic dynafed
         consensus.vDeployments[Consensus::DEPLOYMENT_DYNA_FED].nStartTime = 0;
 
+        nDefaultPort = 18892;
+        vSeeds.clear();
+        vFixedSeeds.clear();
+
         default_magic_str = "410EDD62";
         default_signblockscript = "51210217e403ddb181872c32a0cd468c710040b2f53d8cac69f18dad07985ee37e9a7151ae";
         UpdateFromArgs(args);
         SetGenesisBlock();
         consensus.hashGenesisBlock = genesis.GetHash();
+        if (!args.IsArgSet("-seednode")) {
+            vSeeds.emplace_back("liquid-testnet.blockstream.com");
+        }
     }
 };
 
