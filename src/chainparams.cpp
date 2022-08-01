@@ -96,34 +96,40 @@ static void UpdateElementsActivationParametersFromArgs(Consensus::Params& consen
     for (const std::string& strDeployment : args.GetArgs("-evbparams")) {
         std::vector<std::string> vDeploymentParams;
         boost::split(vDeploymentParams, strDeployment, boost::is_any_of(":"));
-        if (vDeploymentParams.size() != 5) {
-            throw std::runtime_error("ElementsVersion bits parameters malformed, expecting deployment:start:end:period:threshold");
+        if (vDeploymentParams.size() < 2) {
+            throw std::runtime_error("ElementsVersion bits parameters malformed, expecting deployment:start[:end[:period[:threshold[:min_activation_height]]]]");
         }
-        int64_t nStartTime = 0, nTimeout = 0, nPeriod = 0, nThreshold = 0;
-        bool use_nStartTime = false, use_nTimeout = false, use_nPeriod = false, use_nThreshold = false;
+        int64_t nStartTime = 0, nTimeout = 0, nPeriod = 0, nThreshold = 0, nMinActivationHeight = 0;
+        bool use_nStartTime = false, use_nTimeout = false, use_nPeriod = false, use_nThreshold = false, use_nMinActivationHeight = false;
         if(vDeploymentParams[1].length()) {
             if (!ParseInt64(vDeploymentParams[1], &nStartTime)) {
                 throw std::runtime_error(strprintf("Invalid nStartTime (%s)", vDeploymentParams[1]));
             }
             use_nStartTime = true;
         }
-        if(vDeploymentParams[2].length()) {
+        if(vDeploymentParams.size() >= 3 &&vDeploymentParams[2].length()) {
             if (!ParseInt64(vDeploymentParams[2], &nTimeout)) {
                 throw std::runtime_error(strprintf("Invalid nTimeout (%s)", vDeploymentParams[2]));
             }
             use_nTimeout = true;
         }
-        if(vDeploymentParams[3].length()) {
+        if(vDeploymentParams.size() >= 4 &&vDeploymentParams[3].length()) {
             if (!ParseInt64(vDeploymentParams[3], &nPeriod)) {
                 throw std::runtime_error(strprintf("Invalid nPeriod (%s)", vDeploymentParams[3]));
             }
             use_nPeriod = true;
         }
-        if(vDeploymentParams[4].length()) {
+        if(vDeploymentParams.size() >= 5 &&vDeploymentParams[4].length()) {
             if (!ParseInt64(vDeploymentParams[4], &nThreshold)) {
                 throw std::runtime_error(strprintf("Invalid nThreshold (%s)", vDeploymentParams[4]));
             }
             use_nThreshold = true;
+        }
+        if(vDeploymentParams.size() >= 6 &&vDeploymentParams[5].length()) {
+            if (!ParseInt64(vDeploymentParams[5], &nMinActivationHeight)) {
+                throw std::runtime_error(strprintf("Invalid nMinActivationHeight (%s)", vDeploymentParams[5]));
+            }
+            use_nMinActivationHeight = true;
         }
         bool found = false;
         for (int j=0; j < (int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS; ++j) {
@@ -162,6 +168,12 @@ static void UpdateElementsActivationParametersFromArgs(Consensus::Params& consen
                     }
                     extra_logging+= strprintf(", threshold=%ld", nThreshold);
                 }
+                if(use_nMinActivationHeight) {
+                    consensus.vDeployments[d].min_activation_height = nMinActivationHeight;
+                } else {
+                    nMinActivationHeight = consensus.vDeployments[d].min_activation_height;
+                }
+                extra_logging+= strprintf(", min_activation_height=%ld", nMinActivationHeight);
                 found = true;
                 LogPrintf("Setting version bits activation parameters for %s to start=%ld, timeout=%ld%s\n", vDeploymentParams[0], nStartTime, nTimeout, extra_logging.c_str());
                 break;
