@@ -226,7 +226,7 @@ CBlockIndex* ParseHashOrHeight(const UniValue& param, ChainstateManager& chainma
     }
 }
 
-UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex)
+UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex, const CBlockIndex* blockindexextra)
 {
     // Serialize passed information without accessing chain state of the active chain!
     AssertLockNotHeld(cs_main); // For performance reasons
@@ -248,25 +248,28 @@ UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex
         result.pushKV("difficulty", GetDifficulty(blockindex));
         result.pushKV("chainwork", blockindex->nChainWork.GetHex());
     } else {
+        if (!blockindex->trimmed() && !blockindexextra) {
+            blockindexextra = blockindex;
+        }
         if (!blockindex->dynafed_block()) {
-            if (blockindex->trimmed()) {
+            if (!blockindexextra) {
                 result.pushKV("signblock_witness_asm", "<trimmed>");
                 result.pushKV("signblock_witness_hex", "<trimmed>");
                 result.pushKV("signblock_challenge", "<trimmed>");
                 result.pushKV("warning", "Fields missing due to -trim_headers flag.");
             } else {
-                result.pushKV("signblock_witness_asm", ScriptToAsmStr(blockindex->get_proof().solution));
-                result.pushKV("signblock_witness_hex", HexStr(blockindex->get_proof().solution));
-                result.pushKV("signblock_challenge", HexStr(blockindex->get_proof().challenge));
+                result.pushKV("signblock_witness_asm", ScriptToAsmStr(blockindexextra->get_proof().solution));
+                result.pushKV("signblock_witness_hex", HexStr(blockindexextra->get_proof().solution));
+                result.pushKV("signblock_challenge", HexStr(blockindexextra->get_proof().challenge));
             }
         } else {
-            if (blockindex->trimmed()) {
+            if (!blockindexextra) {
                 result.pushKV("signblock_witness_hex", "<trimmed>");
                 result.pushKV("dynamic_parameters", "<trimmed>");
                 result.pushKV("warning", "Fields missing due to -trim_headers flag.");
             } else {
-                result.pushKV("signblock_witness_hex", EncodeHexScriptWitness(blockindex->signblock_witness()));
-                result.pushKV("dynamic_parameters", dynaParamsToJSON(blockindex->dynafed_params()));
+                result.pushKV("signblock_witness_hex", EncodeHexScriptWitness(blockindexextra->signblock_witness()));
+                result.pushKV("dynamic_parameters", dynaParamsToJSON(blockindexextra->dynafed_params()));
             }
         }
     }
@@ -280,7 +283,13 @@ UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex
 
 UniValue blockToJSON(const CBlock& block, const CBlockIndex* tip, const CBlockIndex* blockindex, bool txDetails)
 {
-    UniValue result = blockheaderToJSON(tip, blockindex);
+    UniValue result;
+    if (blockindex->trimmed()) {
+        CBlockIndex tmp = CBlockIndex(block.GetBlockHeader());
+        result = blockheaderToJSON(tip, blockindex, &tmp);
+    } else {
+        result = blockheaderToJSON(tip, blockindex);
+    }
 
     result.pushKV("strippedsize", (int)::GetSerializeSize(block, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS));
     result.pushKV("size", (int)::GetSerializeSize(block, PROTOCOL_VERSION));
@@ -991,6 +1000,13 @@ static RPCHelpMan getblockheader()
         }
         std::string strHex = HexStr(ssBlock);
         return strHex;
+    }
+
+    if (pblockindex->trimmed()) {
+        CBlockHeader tmpheader;
+        ReadBlockHeaderFromDisk(tmpheader, pblockindex, Params().GetConsensus());
+        CBlockIndex tmp(tmpheader);
+        return blockheaderToJSON(tip, pblockindex, &tmp);
     }
 
     return blockheaderToJSON(tip, pblockindex);
