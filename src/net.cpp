@@ -10,6 +10,7 @@
 #include <net.h>
 
 #include <banman.h>
+#include <validation.h>
 #include <clientversion.h>
 #include <compat.h>
 #include <consensus/consensus.h>
@@ -487,7 +488,11 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo
     if (!addr_bind.IsValid()) {
         addr_bind = GetBindAddress(sock->Get());
     }
-    CNode* pnode = new CNode(id, nLocalServices, sock->Release(), addrConnect, CalculateKeyedNetGroup(addrConnect), nonce, addr_bind, pszDest ? pszDest : "", conn_type, /* inbound_onion */ false);
+    ServiceFlags nLocalServicesAux = nLocalServices;
+    if (m_chainman&&!m_chainman->ActiveChainstate().IsInitialBlockDownload()) {
+        nLocalServicesAux = ServiceFlags(nLocalServices & ~NODE_NETWORK & ~NODE_NETWORK_LIMITED);
+    }
+    CNode* pnode = new CNode(id, nLocalServicesAux, sock->Release(), addrConnect, CalculateKeyedNetGroup(addrConnect), nonce, addr_bind, pszDest ? pszDest : "", conn_type, /* inbound_onion */ false);
     pnode->AddRef();
 
     // We're making a new connection, harvest entropy from the time (and our peer count)

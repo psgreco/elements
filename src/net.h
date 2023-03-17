@@ -41,6 +41,7 @@
 class CScheduler;
 class CNode;
 class BanMan;
+class ChainstateManager;
 struct bilingual_str;
 
 /** Default for -whitelistrelay. */
@@ -759,6 +760,7 @@ public:
         CClientUIInterface* uiInterface = nullptr;
         NetEventsInterface* m_msgproc = nullptr;
         BanMan* m_banman = nullptr;
+        ChainstateManager* m_chainman = nullptr;
         unsigned int nSendBufferMaxSize = 0;
         unsigned int nReceiveFloodSize = 0;
         uint64_t nMaxOutboundLimit = 0;
@@ -789,6 +791,7 @@ public:
         m_max_outbound = m_max_outbound_full_relay + m_max_outbound_block_relay + nMaxFeeler;
         clientInterface = connOptions.uiInterface;
         m_banman = connOptions.m_banman;
+        m_chainman = connOptions.m_chainman;
         m_msgproc = connOptions.m_msgproc;
         nSendBufferMaxSize = connOptions.nSendBufferMaxSize;
         nReceiveFloodSize = connOptions.nReceiveFloodSize;
@@ -1130,6 +1133,7 @@ private:
     NetEventsInterface* m_msgproc;
     /** Pointer to this node's banman. May be nullptr - check existence before dereferencing. */
     BanMan* m_banman;
+    ChainstateManager* m_chainman;
 
     /**
      * Addresses that were saved during the previous clean shutdown. We'll
