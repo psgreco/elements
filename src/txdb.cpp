@@ -324,28 +324,10 @@ const CBlockIndex *CBlockTreeDB::RegenerateFullIndex(const CBlockIndex *pindexTr
         LOCK(cs_main);
         // In unpruned nodes, same data could be read from blocks using ReadBlockFromDisk, but that turned out to
         // be about 6x slower than reading from the index
-#if 0
-        std::unique_ptr<CDBIterator> pcursor(this->NewIterator());
-
-        pcursor->Seek(std::make_pair(DB_BLOCK_INDEX, pindexTrimmed->GetBlockHash()));
-
-        // Load m_block_index
-        if (pcursor->Valid()) {
-            std::pair<uint8_t, uint256> key;
-            if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX) {
-                CDiskBlockIndex diskindex;
-                if (pcursor->GetValue(diskindex)) {
-                    tmp = diskindex.GetBlockHeader();
-                    BlockRead = true;
-                }
-            }
-        }
-#else
         std::pair<uint8_t, uint256> key(DB_BLOCK_INDEX, pindexTrimmed->GetBlockHash());
         CDiskBlockIndex diskindex;
         BlockRead = this->Read(key, diskindex);
         tmp = diskindex.GetBlockHeader();
-#endif
     }
     //LogPrintf("%s: 2- Re-reading block %d from disk, %s in %luus\n", __func__, pindexTrimmed->nHeight, (BlockRead)?"Found":"not found", GetTimeMicros() - n_start);
     assert(BlockRead);
