@@ -15,6 +15,7 @@
 
 #include <vector>
 
+//struct NodeContext;
 /**
  * Maximum amount of time that a block timestamp is allowed to exceed the
  * current network-adjusted time before the block will be accepted.
@@ -205,7 +206,10 @@ protected:
 
     friend class CBlockTreeDB;
 
+    //static NodeContext *m_pcontext;
+
 public:
+    //static void SetNodeContext(NodeContext *context) { m_pcontext = context; };
 
     // Irrevocably remove blocksigning and dynafed-related stuff from this
     // in-memory copy of the block header.
