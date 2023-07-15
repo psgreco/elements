@@ -5,7 +5,14 @@
 
 #include <chain.h>
 
+#if 1
 #include <validation.h> // pblocktree
+#else
+#include <validation.h>
+#include <node/context.h>
+
+NodeContext* CBlockIndex::m_pcontext;
+#endif
 
 /**
  * CChain implementation
@@ -61,10 +68,12 @@ void CBlockIndex::untrim() {
     proof = pindexfull->proof;
     m_dynafed_params = pindexfull->m_dynafed_params;
     m_signblock_witness = pindexfull->m_signblock_witness;
+    //m_pcontext->chainman->m_blockman.m_dirty_blockindex.insert(this);
 }
 
 const CBlockIndex *CBlockIndex::untrim_to(CBlockIndex *pindexNew) const
 {
+    //return m_pcontext->chainman->m_blockman.m_block_tree_db->RegenerateFullIndex(this, pindexNew);
     return pblocktree->RegenerateFullIndex(this, pindexNew);
 }
 

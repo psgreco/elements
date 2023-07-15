@@ -394,6 +394,7 @@ struct CBlockIndexWorkComparator
 class BlockManager
 {
     friend CChainState;
+    //friend CBlockIndex;
 
 private:
     /* Calculate the block/rev files to delete based on height specified by user with RPC command pruneblockchain */
