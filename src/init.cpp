@@ -998,7 +998,7 @@ bool AppInitParameterInteraction(const ArgsManager& args)
         //   set of blocks we've already validated. Capping this is necessary to keep memory usage
         //   bounded during IBD.
     }
-    nHeaderDownloadBuffer = epoch_length * 2;
+    nHeaderDownloadBuffer = std::max(epoch_length, (uint32_t)4000) * 2;
 
     nConnectTimeout = args.GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0) {
