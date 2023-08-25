@@ -665,8 +665,8 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             "".join("\n  {!r}".format(m) for m in pool),
         ))
 
-    def sync_all(self, nodes=None, expect_disconnected=False):
-        self.sync_blocks(nodes, expect_disconnected=expect_disconnected)
+    def sync_all(self, nodes=None, expect_disconnected=False, timeout=60):
+        self.sync_blocks(nodes, expect_disconnected=expect_disconnected, timeout=timeout)
         self.sync_mempools(nodes)
 
     def wait_until(self, test_function, timeout=60):
