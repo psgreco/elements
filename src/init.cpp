@@ -994,11 +994,13 @@ bool AppInitParameterInteraction(const ArgsManager& args)
         //   We add one epoch here for the current partial epoch, and then another one for good luck.
 
         nMustKeepFullHeaders = chainparams.GetConsensus().total_valid_epochs * epoch_length;
+        //nMustKeepFullHeaders = 0;
         // This is the number of headers we can have in flight downloading at a time, beyond the
         //   set of blocks we've already validated. Capping this is necessary to keep memory usage
         //   bounded during IBD.
     }
-    nHeaderDownloadBuffer = std::max(epoch_length, (uint32_t)4000) * 2;
+    nHeaderDownloadBuffer = std::max(epoch_length, (uint32_t)20160) * 2;
+    //nHeaderDownloadBuffer = std::numeric_limits<uint32_t>::max();
 
     nConnectTimeout = args.GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0) {
