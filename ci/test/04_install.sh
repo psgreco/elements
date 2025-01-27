@@ -6,12 +6,14 @@
 
 export LC_ALL=C.UTF-8
 
+set -x
+
 if [[ $QEMU_USER_CMD == qemu-s390* ]]; then
   export LC_ALL=C
 fi
 
 if [ "$CI_OS_NAME" == "macos" ]; then
-  sudo -H pip3 install --upgrade pip
+  sudo -H pip3 install --upgrade pip || true
   # shellcheck disable=SC2086
   IN_GETOPT_BIN="$(brew --prefix gnu-getopt)/bin/getopt" ${CI_RETRY_EXE} pip3 install --user $PIP_PACKAGES
 fi
