@@ -1879,11 +1879,14 @@ TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool b
     const PrecomputedTransactionData txdata = PrecomputePSBTData(psbtx);
     LOCK(cs_wallet);
 
+    WalletLogPrintf("debug: Filling PSBT Data, checking inputs\n");
     // Get all of the previous transactions
     for (PSBTInput& input : psbtx.inputs) {
+        WalletLogPrintf("debug: Filling PSBT Data, checking if input is signed\n");
         if (PSBTInputSigned(input)) {
             continue;
         }
+        WalletLogPrintf("debug: Filling PSBT Data, input unsigned\n");
 
         // If we have no utxo, grab it from the wallet.
         if (!input.non_witness_utxo) {
@@ -1913,6 +1916,7 @@ TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool b
         }
     }
 
+    WalletLogPrintf("debug: Filling PSBT Data, checking inputs, part 2\n");
     // Fill in information from ScriptPubKeyMans
     // Because each ScriptPubKeyMan may be able to fill more than one input, we need to keep track of each ScriptPubKeyMan that has filled this psbt.
     // Each iteration, we may fill more inputs than the input that is specified in that iteration.
@@ -1937,7 +1941,9 @@ TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool b
             continue;
         }
         SignatureData sigdata;
+        WalletLogPrintf("debug: FillSignatureData\n");
         input.FillSignatureData(sigdata);
+        WalletLogPrintf("debug: FillSignatureData done\n");
         std::set<ScriptPubKeyMan*> spk_mans = GetScriptPubKeyMans(script);
         if (spk_mans.size() == 0) {
             continue;
@@ -1961,6 +1967,7 @@ TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool b
         }
     }
 
+    WalletLogPrintf("debug: FillPSBTData complete\n");
     return TransactionError::OK;
 }
 
@@ -2003,9 +2010,11 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
 {
     LOCK(cs_wallet);
 
+    WalletLogPrintf("debug: SignPSBT before sign\n");
     // If we're signing, check that the transaction is not still in need of blinding
     // Also check that the amount and asset proofs are valid
     if (sign) {
+        WalletLogPrintf("debug: SignPSBT checking outputs\n");
         for (const PSBTOutput& o : psbtx.outputs) {
             if (o.IsBlinded()) {
                 switch (VerifyBlindProofs(o)) {
@@ -2056,6 +2065,7 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
         *n_signed = 0;
     }
 
+    WalletLogPrintf("debug: SignPSBT GetUnsignedTx\n");
     CMutableTransaction tx = psbtx.GetUnsignedTx();
     tx.witness.vtxoutwit.resize(tx.vout.size());
 
@@ -2091,6 +2101,7 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
         }
     }
 
+    WalletLogPrintf("debug: SignPSBT peg-in part\n");
     // Stuff in the peg-in and issuance data
     for (unsigned int i = 0; i < tx.vin.size(); ++i) {
         PSBTInput& input = psbtx.inputs[i];
@@ -2134,6 +2145,7 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
         }
     }
 
+    WalletLogPrintf("debug: SignPSBT checking imbalance\n");
     // This is a convenience/usability check -- it's not invalid to sign an unbalanced transaction, but it's easy to shoot yourself in the foot.
     if (!imbalance_ok) {
         // Get UTXOs for all inputs, to check that amounts balance before signing.
@@ -2152,8 +2164,10 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
         }
     }
 
+    WalletLogPrintf("debug: SignPSBT PrecomputePSBTData\n");
     // ELEMENTS: precompute transaction data only after munging is done
     const PrecomputedTransactionData txdata = PrecomputePSBTData(psbtx);
+    WalletLogPrintf("debug: SignPSBT GetAllScriptPubkeyMans\n");
     for (ScriptPubKeyMan* spk_man : GetAllScriptPubKeyMans()) {
         int n_signed_this_spkm = 0;
         // ELEMENTS: Here we _only_ sign, and do not e.g. fill in key origin data.
@@ -2167,11 +2181,13 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
         }
     }
 
+    WalletLogPrintf("debug: SignPSBT done\n");
     // Complete if every input is now signed
     complete = true;
     for (const auto& input : psbtx.inputs) {
         complete &= PSBTInputSigned(input);
     }
+    WalletLogPrintf("debug: SignPSBT returning\n");
 
     return TransactionError::OK;
 }
@@ -2181,15 +2197,21 @@ TransactionError CWallet::FillPSBT(PartiallySignedTransaction& psbtx, bool& comp
 {
     complete = false;
     TransactionError te;
+
+    WalletLogPrintf("debug: Filling PSBT Data\n");
     te = FillPSBTData(psbtx, bip32derivs, include_explicit);
     if (te != TransactionError::OK) {
+        WalletLogPrintf("debug: Filling PSBT Data error\n");
         return te;
     }
+    WalletLogPrintf("debug: About to sign PSBT\n");
     // For backwards compatibility, do not check if amounts balance before signing in this case.
     te = SignPSBT(psbtx, complete, sighash_type, sign, imbalance_ok, bip32derivs, n_signed, finalize);
     if (te != TransactionError::OK) {
+        WalletLogPrintf("debug: About to sign PSBT error\n");
         return te;
     }
+    WalletLogPrintf("debug: Filling PSBT ok\n");
     return TransactionError::OK;
 }
 

@@ -1385,20 +1385,25 @@ RPCHelpMan walletprocesspsbt()
     const std::shared_ptr<const CWallet> pwallet = GetWalletForJSONRPCRequest(request);
     if (!pwallet) return NullUniValue;
 
+    pwallet->WalletLogPrintf("debug: got pwallet\n");
     const CWallet& wallet{*pwallet};
+    pwallet->WalletLogPrintf("debug: got wallet copy, waiting for sync\n");
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
     wallet.BlockUntilSyncedToCurrentChain();
 
+    pwallet->WalletLogPrintf("debug: typecheck\n");
     RPCTypeCheck(request.params, {UniValue::VSTR});
 
     // Unserialize the transaction
     PartiallySignedTransaction psbtx;
     std::string error;
+    pwallet->WalletLogPrintf("debug: decoding\n");
     if (!DecodeBase64PSBT(psbtx, request.params[0].get_str(), error)) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, strprintf("TX decode failed %s", error));
     }
 
+    pwallet->WalletLogPrintf("debug: parsesighash\n");
     // Get the sighash type
     int nHashType = ParseSighashString(request.params[2]);
 
@@ -1408,11 +1413,13 @@ RPCHelpMan walletprocesspsbt()
     bool complete = true;
 
 
-    const TransactionError err{wallet.FillPSBT(psbtx, complete, nHashType, false, bip32derivs, true, nullptr, true, false)};
+    pwallet->WalletLogPrintf("debug: Filling PSBT\n");
+    const TransactionError err{pwallet->FillPSBT(psbtx, complete, nHashType, false, bip32derivs, true, nullptr, true, false)};
     if (err != TransactionError::OK) {
         throw JSONRPCTransactionError(err);
     }
 
+    pwallet->WalletLogPrintf("debug: checking needs_blinding\n");
     // If not blinded but needs blinding, blind
     bool needs_blinding = false;
     for (const PSBTOutput& output : psbtx.outputs) {
@@ -1422,28 +1429,37 @@ RPCHelpMan walletprocesspsbt()
         }
     }
     if (needs_blinding) {
+        pwallet->WalletLogPrintf("debug: before blinding\n");
         BlindingStatus status = pwallet->WalletBlindPSBT(psbtx);
         // Fail if we couldn't blind, but only if it is for reasons other than needing UTXOs
         if (status != BlindingStatus::OK && status != BlindingStatus::NEEDS_UTXOS) {
             throw JSONRPCError(RPC_WALLET_ERROR, GetBlindingStatusError(status));
         }
+        pwallet->WalletLogPrintf("debug: after blinding\n");
     }
 
+    pwallet->WalletLogPrintf("debug: checking isFullyBlinded\n");
     // If fully blinded, sign if we want to
     if (psbtx.IsFullyBlinded()) {
+        pwallet->WalletLogPrintf("debug: before signing\n");
         bool sign = request.params[1].isNull() ? true : request.params[1].get_bool();
         if (sign) {
+            pwallet->WalletLogPrintf("debug: checking Unlocked\n");
             EnsureWalletIsUnlocked(*pwallet);
+            pwallet->WalletLogPrintf("debug: before signing\n");
             const TransactionError err = pwallet->FillPSBT(psbtx, complete, nHashType, sign, bip32derivs, true, nullptr, true, finalize);
             if (err != TransactionError::OK) {
                 throw JSONRPCTransactionError(err);
             }
+            pwallet->WalletLogPrintf("debug: sign complete\n");
         }
     }
 
+    pwallet->WalletLogPrintf("debug: Preparing results\n");
     UniValue result(UniValue::VOBJ);
     CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
     ssTx << psbtx;
+    pwallet->WalletLogPrintf("debug: returning\n");
     result.pushKV("psbt", EncodeBase64(ssTx.str()));
     result.pushKV("complete", complete);
 
