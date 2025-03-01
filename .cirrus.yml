@@ -67,15 +67,15 @@ compute_credits_template: &CREDITS_TEMPLATE
   use_compute_credits: $CIRRUS_REPO_FULL_NAME == 'ElementsProject/elements' && $CIRRUS_PR != ""
 
 task:
-  name: "Win64 native [msvc]"
+  name: "Win64 native [vs2022]"
   << : *FILTER_TEMPLATE
   windows_container:
     cpu: 4
     memory: 8G
-    image: cirrusci/windowsservercore:visualstudio2019
+    image: cirrusci/windowsservercore:visualstudio2022
   timeout_in: 120m
   env:
-    PATH: 'C:\jom;C:\Python39;C:\Python39\Scripts;C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin;%PATH%'
+    PATH: 'C:\jom;C:\Python39;C:\Python39\Scripts;C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin;%PATH%'
     PYTHONUTF8: 1
     CI_VCPKG_TAG: '2021.05.12'
     VCPKG_DOWNLOADS: 'C:\Users\ContainerAdministrator\AppData\Local\vcpkg\downloads'
@@ -84,7 +84,7 @@ task:
     QT_LOCAL_PATH: 'C:\qt-everywhere-src-5.15.2.zip'
     QT_SOURCE_DIR: 'C:\qt-everywhere-src-5.15.2'
     QTBASEDIR: 'C:\Qt_static'
-    x64_NATIVE_TOOLS: '"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"'
+    x64_NATIVE_TOOLS: '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"'
     IgnoreWarnIntDirInTempDetected: 'true'
   merge_script:
     - git config --global user.email "ci@ci.ci"
