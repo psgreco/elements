@@ -142,10 +142,10 @@ void AddButtonShortcut(QAbstractButton* button, const QKeySequence& shortcut)
 
 bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
 {
-    return false;  // TODO
-
-    // return if URI is not valid or is no bitcoin: URI
-    if(!uri.isValid() || uri.scheme() != QString("bitcoin"))
+    // return if URI is not valid or incorrect scheme
+    bool valid_liquid = g_con_elementsmode && (uri.scheme() == QString("liquidnetwork") || uri.scheme() == QString("liquidtestnet"));
+    bool valid_bitcoin = !g_con_elementsmode && (uri.scheme() == QString("bitcoin"));
+    if (!uri.isValid() || !(valid_liquid || valid_bitcoin))
         return false;
 
     SendCoinsRecipient rv;
@@ -209,7 +209,11 @@ QString formatBitcoinURI(const SendCoinsRecipient &info)
 {
     bool bech_32 = info.address.startsWith(QString::fromStdString(Params().Bech32HRP() + "1"));
 
-    QString ret = QString("bitcoin:%1").arg(bech_32 ? info.address.toUpper() : info.address);
+    QString network = QString("bitcoin:%1");
+    if (g_con_elementsmode) {
+        network = Params().NetworkIDString() == "liquidtestnet" ? QString("liquidtestnet:%1") : QString("liquidnetwork:%1");
+    }
+    QString ret = network.arg(bech_32 ? info.address.toUpper() : info.address);
     int paramCount = 0;
 
     if (info.amount)
