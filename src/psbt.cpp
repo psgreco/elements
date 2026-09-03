@@ -693,10 +693,15 @@ bool PSBTInputSignedAndVerified(const PartiallySignedTransaction psbt, unsigned 
     }
 
     CMutableTransaction tx = psbt.GetUnsignedTx();
+    // ELEMENTS: enable SCRIPT_SIGHASH_RANGEPROOF when verifying, mirroring
+    // ProduceSignature()/DataFromTransaction(). Otherwise signatures using the
+    // SIGHASH_RANGEPROOF (0x40) bit -- which the wallet now produces by default
+    // once dynafed is active -- are rejected as "not understood" and the input
+    // never verifies, breaking finalization.
     if (txdata) {
-        return VerifyScript(input.final_script_sig, utxo.scriptPubKey, &input.final_script_witness, STANDARD_SCRIPT_VERIFY_FLAGS, MutableTransactionSignatureChecker{&tx, input_index, utxo.nValue, *txdata, MissingDataBehavior::FAIL});
+        return VerifyScript(input.final_script_sig, utxo.scriptPubKey, &input.final_script_witness, STANDARD_SCRIPT_VERIFY_FLAGS | SCRIPT_SIGHASH_RANGEPROOF, MutableTransactionSignatureChecker{&tx, input_index, utxo.nValue, *txdata, MissingDataBehavior::FAIL});
     } else {
-        return VerifyScript(input.final_script_sig, utxo.scriptPubKey, &input.final_script_witness, STANDARD_SCRIPT_VERIFY_FLAGS, MutableTransactionSignatureChecker{&tx, input_index, utxo.nValue, MissingDataBehavior::FAIL});
+        return VerifyScript(input.final_script_sig, utxo.scriptPubKey, &input.final_script_witness, STANDARD_SCRIPT_VERIFY_FLAGS | SCRIPT_SIGHASH_RANGEPROOF, MutableTransactionSignatureChecker{&tx, input_index, utxo.nValue, MissingDataBehavior::FAIL});
     }
 }
 
@@ -1017,12 +1022,21 @@ void PartiallySignedTransaction::SetupFromTx(const CMutableTransaction& tx)
             }
         }
         // Peg-in things
-        if (txin.m_is_pegin) {
+        if (txin.m_is_pegin && i < tx.witness.vtxinwit.size()) {
             CAmount peg_in_value;
             CAsset asset;
-            if (DecomposePeginWitness(tx.witness.vtxinwit[i].m_pegin_witness, peg_in_value, asset, input.m_peg_in_genesis_hash, input.m_peg_in_claim_script, input.m_peg_in_tx, input.m_peg_in_txout_proof)) {
+            uint256 genesis_hash;
+            CScript claim_script;
+            std::variant<std::monostate, Sidechain::Bitcoin::CTransactionRef, CTransactionRef> peg_in_tx;
+            std::variant<std::monostate, Sidechain::Bitcoin::CMerkleBlock, CMerkleBlock> txout_proof;
+            if (DecomposePeginWitness(tx.witness.vtxinwit[i].m_pegin_witness, peg_in_value, asset,
+                                    genesis_hash, claim_script, peg_in_tx, txout_proof)
+                && asset == Params().GetConsensus().pegged_asset) {
                 input.m_peg_in_value = peg_in_value;
-                assert(asset == Params().GetConsensus().pegged_asset);
+                input.m_peg_in_genesis_hash = genesis_hash;
+                input.m_peg_in_claim_script = claim_script;
+                input.m_peg_in_tx = peg_in_tx;
+                input.m_peg_in_txout_proof = txout_proof;
             }
         }
     }

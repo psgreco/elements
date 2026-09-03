@@ -39,6 +39,15 @@ enum
     // ELEMENTS:
     // A flag that means the rangeproofs should be included in the sighash.
     SIGHASH_RANGEPROOF = 0x40,
+
+    // ELEMENTS:
+    // The default sighash used by wallets/tools when signing pre-Taproot
+    // (BASE/WITNESS_V0) inputs on chains where SIGHASH_RANGEPROOF is active.
+    // This commits to the output rangeproofs, closing the pre-Taproot
+    // rangeproof (witness) malleability gap. Note this must only be used once
+    // dynafed (which enables SCRIPT_SIGHASH_RANGEPROOF) is active for the target
+    // chain; otherwise the resulting signatures are non-standard and invalid.
+    SIGHASH_ALL_WITH_RANGEPROOF = SIGHASH_ALL | SIGHASH_RANGEPROOF,
 };
 
 /** Script verification flags.
@@ -293,12 +302,15 @@ extern const HashWriter HASHER_TAPBRANCH_ELEMENTS;  //!< Hasher with tag "TapBra
  *  (bare, P2SH, P2WPKH, P2WSH). */
 class SigHashCache
 {
-    /** For each sighash mode (ALL, SINGLE, NONE, ALL|ANYONE, SINGLE|ANYONE, NONE|ANYONE),
+    /** For each sighash mode (ALL, SINGLE, NONE, ALL|ANYONE, SINGLE|ANYONE, NONE|ANYONE, ALL|RANGEPROOF, SINGLE|RANGEPROOF, NONE|RANGEPROOF, ALL|ANYONE|RANGEPROOF, SINGLE|ANYONE|RANGEPROOF, NONE|ANYONE|RANGEPROOF),
      *  optionally store a scriptCode which the hash is for, plus a midstate for the SHA256
      *  computation just before adding the hash_type itself. */
-    std::optional<std::pair<CScript, HashWriter>> m_cache_entries[6];
+    // ELEMENTS: the SIGHASH_RANGEPROOF (0x40) bit changes the sighash preimage, so it is part of
+    // the cache key and the table has 16 entries rather than upstream's 6. Do not drop this when
+    // merging upstream changes to this file.
+    std::optional<std::pair<CScript, HashWriter>> m_cache_entries[16];
 
-    /** Given a hash_type, find which of the 6 cache entries is to be used. */
+    /** Given a hash_type, find which of the cache entries is to be used. */
     int CacheIndex(int32_t hash_type) const noexcept;
 
 public:

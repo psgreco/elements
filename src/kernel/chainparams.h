@@ -145,6 +145,21 @@ public:
     std::string GetChainTypeString() const { return m_chain_type.chain_name; }
     /** Return the chain type */
     ChainTypeMeta GetChainTypeMeta() const { return m_chain_type; }
+    /**
+     * ELEMENTS: Whether SIGHASH_RANGEPROOF can be assumed active for this chain
+     * from the chain parameters alone (i.e. without inspecting the current tip).
+     * Used by offline tooling such as elements-tx that has no chainstate to
+     * decide the default sighash. This is true when dynafed (which enables
+     * SCRIPT_SIGHASH_RANGEPROOF) is configured ALWAYS_ACTIVE (e.g. elementsregtest
+     * with dynafed enabled, or liquidv1test), or on liquidv1 where dynafed is
+     * height-activated (nStartTime is a block height, not the ALWAYS_ACTIVE
+     * sentinel) but is long since active on the live chain.
+     */
+    bool SighashRangeproofActiveByParams() const
+    {
+        return consensus.vDeployments[Consensus::DEPLOYMENT_DYNA_FED].nStartTime == Consensus::BIP9Deployment::ALWAYS_ACTIVE
+            || m_chain_type.chain_type == ChainType::LIQUID1;
+    }
     /** Return the list of hostnames to look up for DNS seeds */
     const std::vector<std::string>& DNSSeeds() const { return vSeeds; }
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
@@ -213,6 +228,9 @@ public:
     static std::unique_ptr<const CChainParams> Main();
     static std::unique_ptr<const CChainParams> TestNet();
     static std::unique_ptr<const CChainParams> TestNet4();
+
+    // ELEMENTS: Elements adds classes with their own members so the base pointer needs a virtual destructor.
+    virtual ~CChainParams() = default;
 
 protected:
     CChainParams() = default;

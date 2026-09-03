@@ -244,6 +244,20 @@ def default_scriptcode_suffix(ctx):
     assert False
 
 #ELEMENTS: taphash depends on genesis hash
+def default_scriptcode_suffix(ctx):
+    """Default expression for "scriptcode_suffix", the actually used portion of the scriptcode."""
+    scriptcode = get(ctx, "scriptcode")
+    codesepnum = get(ctx, "codesepnum")
+    if codesepnum == -1:
+        return scriptcode
+    codeseps = 0
+    for (opcode, data, sop_idx) in scriptcode.raw_iter():
+        if opcode == OP_CODESEPARATOR:
+            if codeseps == codesepnum:
+                return CScript(scriptcode[sop_idx+1:])
+            codeseps += 1
+    assert False
+
 def default_sigmsg(ctx):
     """Default expression for "sigmsg": depending on mode, compute BIP341, BIP143, or legacy sigmsg."""
     tx = get(ctx, "tx")
